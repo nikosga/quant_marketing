@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set()
 
-def gen_response_curves(n=1000, channels=4, curve_type='log'):
+def gen_response_curves(n=1000, channels=2, curve_type='log'):
     response_curves = []
     for c in range(channels):
         x = np.arange(100,10000, 100)
@@ -35,11 +35,9 @@ def plot_response_curve(data, x="marketing_spend", y="acquisitions",
     plt.title('Acquisitions wrt Marketing Spend by channel')
     plt.show()
 
-def plot_profit_curve(data, x="marketing_spend", y="profit", 
-                        hue='channel'):
+def plot_profit_curve(data, x="marketing_spend", y="profit"):
     sns.scatterplot(x=x,
                     y=y,
-                    hue=hue,
                     data=data)
     plt.title('Profit vs Marketing Costs')
     plt.show()
@@ -54,6 +52,7 @@ def channel_profit(ltv, c, b, x, y):
     return q*ltv - c
 
 if __name__=="__main__":
+
     data = gen_response_curves()
     x = 'marketing_spend'
     y = 'acquisitions'
@@ -66,26 +65,46 @@ if __name__=="__main__":
         model=fit_log_response_curve(cdata, x=x, y=y)
         cdata[f'fitted_{y}'] = model.predict(cdata)
         models[c]=model
-        plot_response_curve(cdata)
+        #plot_response_curve(cdata)
     
-    c = data.channel.unique()[0]
-    ltv=10
-    profit_data = {'channel':[],
-                   'ltv':[],
-                   'marketing_spend':[],
-                   'profit':[]}
+    ltv=15
+    budget = 10000
+    results = {
+        'iteration':[],
+        'channel':[],
+        'channel marketing spend':[],
+        'ltv':[],
+        'b':[],
+        'channel profit':[]
+        }
 
-    for cost in np.arange(100, 2000, 100):
+    for i in range(100):
+        w = np.random.rand(4)
+        total = w.sum()
+        w /= total
+        cost=budget*w
+        
+        channels = data.channel.unique()
+        total_profit=0
+        for cnt in range(len(channels)):
+            results['iteration'].append(i)
+            results['channel'].append(channels[cnt])
+            results['channel marketing spend'].append(cost[cnt])
+            b = models[channels[cnt]].params[f'np.log({x})']
+            profit = channel_profit(ltv, cost[cnt], b, x, y)
+            results['ltv'].append(ltv)
+            results['b'].append(b)
+            results['channel profit'].append(profit)
 
-        b = models[c].params[f'np.log({x})']
-        profit = channel_profit(ltv, cost, b, x, y)
-        profit_data['channel'].append(c)
-        profit_data['ltv'].append(ltv)
-        profit_data['marketing_spend'].append(cost)
-        profit_data['profit'].append(profit)
+    results = pd.DataFrame(results)
+    results = pd.pivot_table(results, index='iteration', columns=['channel'],
+                   values=['channel marketing spend', 'ltv', 'b', 'channel profit'])
+    results.columns = results.columns.map('|'.join).str.strip('|')
 
-    profit_data = pd.DataFrame(profit_data)
-    plot_profit_curve(profit_data, x="marketing_spend", y="profit", 
-                        hue='channel')
-    optimal_cost = ltv*b
-    print(optimal_cost)
+    profit_cols = [col for col in results.columns if col.split('|')[0]=='channel profit']
+    results['total profit'] = results[profit_cols]. sum(axis=1)
+    for channel in channels:
+        results[f'optimal spend|{channel}'] = results[f'b|{channel}']*results[f'ltv|{channel}']
+    print(results)
+    for channel in channels:
+        plot_profit_curve(results, x=f"channel marketing spend|{channel}", y="total profit")
