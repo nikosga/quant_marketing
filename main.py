@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import statsmodels.formula.api as smf
+import cvxpy as cp
 import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set()
@@ -114,6 +115,21 @@ def sim_opt_profit(data, budget, models, iterations=5000):
     report[f'sim max profit'] = round(results.loc[maxi, 'total profit'], 2)
     return results, report
 
+def nonlinear_programming_opt(budget, ltv_0, ltv_1, b_0, b_1):
+
+    c_0   = cp.Variable(pos=True)
+    c_1 = cp.Variable(pos=True)
+
+    # Constraint
+    constraint = [c_0 + c_1 <= budget]
+
+    # Objective
+    obj = cp.Maximize(b_0*cp.log(c_0)*ltv_0 - c_0 + b_1*cp.log(c_1)*ltv_1 - c_1)
+
+    problem = cp.Problem(obj, constraint)
+    problem.solve(verbose=False)
+    return {'c_0':c_0.value, 'c_1':c_1.value, 'max profit':problem.value}
+
 if __name__=="__main__":
 
     # data generation
@@ -140,10 +156,14 @@ if __name__=="__main__":
 
     c_0 = round(budget/(1 + (ltv_1*b_1) / (ltv_0*b_0)), 2)
     c_1 = round(budget - c_0, 2)
-    print('lagrangian optimal spend', c_0, c_1)
+    max_profit = round(b_0*np.log(c_0)*ltv_0 - c_0 + b_1*np.log(c_1)*ltv_1 - c_1, 2)
+    print('lagrangian optimal spend', c_0, c_1, max_profit)
     
-    # grid search method
-    #'''
+    # nonlinear programming method
+    results = nonlinear_programming_opt(budget, ltv_0, ltv_1, b_0, b_1)
+    print('nonlinear opt', results)
+
+    # simulation method
     results, report = sim_opt_profit(data, budget, models)
     plot_frontier(results, 
                   f"channel marketing spend|{channels[0]}", 
@@ -156,4 +176,3 @@ if __name__=="__main__":
         plot_profit_curve(results, x=f"channel marketing spend|{channel}", y="total profit", optimal_spend=optimal_spend)
 
     print(report)
-    #'''
