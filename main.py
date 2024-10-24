@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set()
 
-def gen_response_curves(n=1000, channels=2, curve_type='log'):
+def gen_response_curves(x_name, y_name, n=1000, channels=2, curve_type='log'):
     response_curves = []
     for c in range(channels):
         x = np.arange(100,10000, 100)
@@ -19,7 +19,7 @@ def gen_response_curves(n=1000, channels=2, curve_type='log'):
 
         y=y.astype(int)
         channel = f'channel {c}'
-        curve = pd.DataFrame({'marketing_spend':x, 'acquisitions':y, 'channel':channel})
+        curve = pd.DataFrame({x_name:x, y_name:y, 'channel':channel})
         response_curves.append(curve)
 
     response_curves = pd.concat(response_curves)
@@ -51,24 +51,8 @@ def channel_profit(ltv, c, b, x, y):
     q = b*np.log(c)
     return q*ltv - c
 
-if __name__=="__main__":
+def grid_search_opt_profit(data, ltv, budget):
 
-    data = gen_response_curves()
-    x = 'marketing_spend'
-    y = 'acquisitions'
-    #plot_response_curve(data)
-
-    models = {}    
-    for c in data.channel.unique():
-        cdata = data[data.channel == c].copy()
-        #print(cdata)
-        model=fit_log_response_curve(cdata, x=x, y=y)
-        cdata[f'fitted_{y}'] = model.predict(cdata)
-        models[c]=model
-        #plot_response_curve(cdata)
-    
-    ltv=15
-    budget = 10000
     results = {
         'iteration':[],
         'channel':[],
@@ -105,6 +89,31 @@ if __name__=="__main__":
     results['total profit'] = results[profit_cols]. sum(axis=1)
     for channel in channels:
         results[f'optimal spend|{channel}'] = results[f'b|{channel}']*results[f'ltv|{channel}']
+    return results
+
+if __name__=="__main__":
+
+    # data generation
+    x = 'marketing_spend'
+    y = 'acquisitions'
+    data = gen_response_curves(x_name=x, y_name=y)
+    #plot_response_curve(data)
+
+    # estimation
+    models = {}    
+    for c in data.channel.unique():
+        #cdata = data[data.channel == c].copy()
+        model=fit_log_response_curve(data[data.channel == c], x=x, y=y)
+        data.loc[data.channel == c, f'fitted_{y}'] = model.predict(data[data.channel == c])
+        models[c]=model
+
+    # review estimation
+    plot_response_curve(data)
+    
+    # grid search method
+    ltv=15
+    budget = 10000
+    results = grid_search_opt_profit(data, ltv, budget)
     print(results)
-    for channel in channels:
+    for channel in data.channel.unique():
         plot_profit_curve(results, x=f"channel marketing spend|{channel}", y="total profit")
