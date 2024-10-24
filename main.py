@@ -9,6 +9,7 @@ def gen_response_curves(x_name, y_name, n=1000, channels=2, curve_type='log'):
     response_curves = []
     for c in range(channels):
         x = np.arange(100,10000, 100)
+        ltv = np.random.normal(loc=15, scale=5)
         beta_0 = np.random.normal(loc=-1000, scale=100)
         beta_1 = np.random.normal(loc=100, scale=10)
         error = np.random.normal(loc=0, scale=30+x/400)
@@ -19,7 +20,7 @@ def gen_response_curves(x_name, y_name, n=1000, channels=2, curve_type='log'):
 
         y=y.astype(int)
         channel = f'channel {c}'
-        curve = pd.DataFrame({x_name:x, y_name:y, 'channel':channel})
+        curve = pd.DataFrame({x_name:x, y_name:y, 'channel':channel, 'ltv':ltv})
         response_curves.append(curve)
 
     response_curves = pd.concat(response_curves)
@@ -35,23 +36,25 @@ def plot_response_curve(data, x="marketing_spend", y="acquisitions",
     plt.title('Acquisitions wrt Marketing Spend by channel')
     plt.show()
 
-def plot_profit_curve(data, x="marketing_spend", y="profit"):
+def plot_profit_curve(data, x="marketing_spend", y="profit", optimal_spend=None):
     sns.scatterplot(x=x,
                     y=y,
                     data=data)
+    if optimal_spend is not None:
+        plt.axvline(optimal_spend, 0,1, color='red', linestyle='--')
+        plt.text(x=optimal_spend+0.05*(data[x].max() - data[x].min()), y=1.1*data[y].min(), s="Optimal Marketing Spend", weight="bold", color='red')
     plt.title('Profit vs Marketing Costs')
     plt.show()
 
 def fit_log_response_curve(data, x, y):
     model = smf.ols(formula=f'{y} ~ np.log({x}) - 1', data=data).fit()
-    #print(model.summary())
     return model
 
 def channel_profit(ltv, c, b, x, y):
     q = b*np.log(c)
     return q*ltv - c
 
-def grid_search_opt_profit(data, ltv, budget):
+def grid_search_opt_profit(data, budget):
 
     results = {
         'iteration':[],
@@ -71,6 +74,7 @@ def grid_search_opt_profit(data, ltv, budget):
         channels = data.channel.unique()
         total_profit=0
         for cnt in range(len(channels)):
+            ltv = data[data.channel==channels[cnt]].ltv.values[0]
             results['iteration'].append(i)
             results['channel'].append(channels[cnt])
             results['channel marketing spend'].append(cost[cnt])
@@ -111,9 +115,10 @@ if __name__=="__main__":
     plot_response_curve(data)
     
     # grid search method
-    ltv=15
     budget = 10000
-    results = grid_search_opt_profit(data, ltv, budget)
+    results = grid_search_opt_profit(data, budget)
     print(results)
     for channel in data.channel.unique():
-        plot_profit_curve(results, x=f"channel marketing spend|{channel}", y="total profit")
+        optimal_spend = results[f'optimal spend|{channel}'].values[0]
+        print(optimal_spend)
+        plot_profit_curve(results, x=f"channel marketing spend|{channel}", y="total profit", optimal_spend=optimal_spend)
