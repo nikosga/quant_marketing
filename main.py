@@ -68,7 +68,7 @@ def channel_profit(ltv, c, b, x, y):
     q = b*np.log(c)
     return q*ltv - c
 
-def sim_opt_profit(data, budget, models, iterations=5000):
+def sim_opt_profit(data, budget, models, x, y, iterations=5000):
 
     results = {
         'iteration':[],
@@ -128,7 +128,7 @@ def nonlinear_programming_opt(budget, ltv_0, ltv_1, b_0, b_1):
 
     problem = cp.Problem(obj, constraint)
     problem.solve(verbose=False)
-    return {'c_0':c_0.value, 'c_1':c_1.value, 'max profit':problem.value}
+    return {'c_0':round(c_0.value, 2), 'c_1':round(c_1.value, 2), 'max profit':round(problem.value, 2)}
 
 if __name__=="__main__":
 
@@ -164,7 +164,7 @@ if __name__=="__main__":
     print('nonlinear opt', results)
 
     # simulation method
-    results, report = sim_opt_profit(data, budget, models)
+    results, report = sim_opt_profit(data, budget, models, x, y)
     plot_frontier(results, 
                   f"channel marketing spend|{channels[0]}", 
                   f"channel marketing spend|{channels[1]}",
