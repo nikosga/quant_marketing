@@ -130,6 +130,18 @@ def nonlinear_programming_opt(budget, ltv_0, ltv_1, b_0, b_1):
     problem.solve(verbose=False)
     return {'c_0':round(c_0.value, 2), 'c_1':round(c_1.value, 2), 'max profit':round(problem.value, 2)}
 
+def lagrangian_opt(ltv_0, ltv_1, b_0, b_1, budget):
+
+    c_0 = round(budget/(1 + (ltv_1*b_1) / (ltv_0*b_0)), 2)
+    c_1 = round(budget - c_0, 2)
+    max_profit = round(b_0*np.log(c_0)*ltv_0 - c_0 + b_1*np.log(c_1)*ltv_1 - c_1, 2)
+
+    return {
+        "channel marketing spend|channel 0":c_0,
+        "channel marketing spend|channel 1":c_1,
+        "max profit":max_profit
+    }
+
 if __name__=="__main__":
 
     # data generation
@@ -148,16 +160,14 @@ if __name__=="__main__":
     plot_response_curve(data)
     budget = 1000
     
-    # lagrangian method
     ltv_0 = data[data.channel == channels[0]].ltv.values[0]
     ltv_1 = data[data.channel == channels[1]].ltv.values[0]
     b_0 = models[channels[0]].params[f'np.log({x})']
     b_1 = models[channels[1]].params[f'np.log({x})']
 
-    c_0 = round(budget/(1 + (ltv_1*b_1) / (ltv_0*b_0)), 2)
-    c_1 = round(budget - c_0, 2)
-    max_profit = round(b_0*np.log(c_0)*ltv_0 - c_0 + b_1*np.log(c_1)*ltv_1 - c_1, 2)
-    print('lagrangian optimal spend', c_0, c_1, max_profit)
+    # lagrangian method
+    results = lagrangian_opt(ltv_0, ltv_1, b_0, b_1, budget)
+    print('lagrangian optimal spend', results)
     
     # nonlinear programming method
     results = nonlinear_programming_opt(budget, ltv_0, ltv_1, b_0, b_1)
