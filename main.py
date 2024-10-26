@@ -28,16 +28,20 @@ def gen_response_curves(x_name, y_name, n=1000, channels=2, curve_type='log'):
     return response_curves
 
 def plot_response_curve(data, x="marketing_spend", y="acquisitions", 
-                        hue='channel', y_hat="fitted_acquisitions"):
+                        hue='channel', y_hat="fitted_acquisitions", save=False):
+    plt.figure(figsize=(10,6))
     sns.scatterplot(x=x,
                     y=y,
                     hue=hue,
                     data=data)
     sns.lineplot(x=x, y=y_hat, hue=hue, data=data, linestyle='--')
     plt.title('Acquisitions wrt Marketing Spend by channel')
+    if save:
+        plt.savefig('figures/response_curve.png', bbox_inches='tight')
     plt.show()
 
-def plot_profit_curve(data, x="marketing_spend", y="profit", optimal_spend=None):
+def plot_profit_curve(data, x="marketing_spend", y="profit", optimal_spend=None, save=False):
+    plt.figure(figsize=(10,6))
     sns.scatterplot(x=x,
                     y=y,
                     data=data)
@@ -45,9 +49,12 @@ def plot_profit_curve(data, x="marketing_spend", y="profit", optimal_spend=None)
         plt.axvline(optimal_spend, 0,1, color='red', linestyle='--')
         plt.text(x=optimal_spend+0.05*(data[x].max() - data[x].min()), y=1.1*data[y].min(), s="Optimal Spend - Simulation", weight="bold", color='red')
     plt.title('Profit vs Marketing Costs')
+    if save:
+        plt.savefig('figures/profit_plot.png', bbox_inches='tight')
     plt.show()
 
-def plot_frontier(data, channel_a, channel_b, max_channel_a, max_channel_b):
+def plot_frontier(data, channel_a, channel_b, max_channel_a, max_channel_b, save=False):
+    plt.figure(figsize=(10,6))
     sns.scatterplot(x=channel_a,
                     y=channel_b,
                     data=data,
@@ -57,6 +64,8 @@ def plot_frontier(data, channel_a, channel_b, max_channel_a, max_channel_b):
     plt.scatter(x=max_channel_a, y=max_channel_b, color='r', s=100)
     plt.title('Frontier Plot')
     plt.tight_layout()
+    if save:
+        plt.savefig('figures/frontier.png', bbox_inches='tight')
     plt.show()
 
 
@@ -157,7 +166,7 @@ if __name__=="__main__":
         models[c]=model
 
     # review estimation
-    plot_response_curve(data)
+    plot_response_curve(data, save=True)
     budget = 1000
     
     ltv_0 = data[data.channel == channels[0]].ltv.values[0]
@@ -179,10 +188,11 @@ if __name__=="__main__":
                   f"channel marketing spend|{channels[0]}", 
                   f"channel marketing spend|{channels[1]}",
                   report[f'sim optimal spend|{channels[0]}'],
-                  report[f'sim optimal spend|{channels[1]}']
+                  report[f'sim optimal spend|{channels[1]}'], save=True
                   )
     for channel in channels:
         optimal_spend = report[f'sim optimal spend|{channel}']
-        plot_profit_curve(results, x=f"channel marketing spend|{channel}", y="total profit", optimal_spend=optimal_spend)
+        plot_profit_curve(results, x=f"channel marketing spend|{channel}", y="total profit", 
+                          optimal_spend=optimal_spend, save=True)
 
     print(report)
