@@ -5,3 +5,5 @@ This repository contains a tutorial and tools for Marketing Spend Optimisation i
 1. Analytical solution with the Lagrangian method
 2. Random search over the space of values for channel marketing costs
 3. Nonlinear optimisation with cvxpy
+
+The full tutorial can be found [here](https://www.nickgavriil.com/post/part-4-marketing-spend-optimisation)
